@@ -12,19 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef __BPF_ABI_MEMORY_RECLAIM_H__
-#define __BPF_ABI_MEMORY_RECLAIM_H__
+#ifndef __BPF_ABI_CONTAINER_CGROUP_KEY_H__
+#define __BPF_ABI_CONTAINER_CGROUP_KEY_H__
 
-#include "bpf_abi.h"
-#include "container_cgroup_key.h"
-
-struct memory_reclaim_event {
-	u8 comm[COMPAT_TASK_COMM_LEN];
-	u64 delta_time;
-	u64 pid;
-	struct container_cgroup_key key;
+struct container_cgroup_key {
+	u64 cgroup_id;
+	u64 css;
 };
 
-BPF_ABI_EXPORT(memory_reclaim_event);
-
-#endif /* __BPF_ABI_MEMORY_RECLAIM_H__ */
+#endif /* __BPF_ABI_CONTAINER_CGROUP_KEY_H__ */

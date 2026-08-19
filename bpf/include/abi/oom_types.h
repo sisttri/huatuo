@@ -16,6 +16,7 @@
 #define __BPF_ABI_OOM_H__
 
 #include "bpf_abi.h"
+#include "container_cgroup_key.h"
 
 struct oom_event {
 	u8 trigger_comm[COMPAT_TASK_COMM_LEN];
@@ -26,6 +27,8 @@ struct oom_event {
 	u64 victim_memcg_css;
 	u64 mem_limit_pages;
 	u64 mem_usage_pages;
+	struct container_cgroup_key trigger_cgroup_key;
+	struct container_cgroup_key victim_cgroup_key;
 };
 
 BPF_ABI_EXPORT(oom_event);

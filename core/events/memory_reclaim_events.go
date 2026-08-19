@@ -50,15 +50,19 @@ func newMemoryReclaim() (*tracing.EventTracingAttr, error) {
 	}, nil
 }
 
-const cssCacheTTL = 5 * time.Second
+const containerCacheTTL = 5 * time.Second
 
 // Start detect work, load bpf and wait data form perfevent
 //
 //go:generate $BPF_COMPILE $BPF_INCLUDE -s $BPF_DIR/memory_reclaim_events.c -o $BPF_DIR/memory_reclaim_events.o
 func (c *memoryReclaimTracing) Start(ctx context.Context) error {
-	b, err := bpf.LoadBPF(bpf.ThisBpfOBJ(), map[string]any{
+	consts, err := pod.CgroupBPFConstants(map[string]any{
 		"deltath": cfg.MemoryReclaim.BlockedThreshold,
 	})
+	if err != nil {
+		return err
+	}
+	b, err := bpf.LoadBPF(bpf.ThisBpfOBJ(), consts)
 	if err != nil {
 		return err
 	}
@@ -76,7 +80,7 @@ func (c *memoryReclaimTracing) Start(ctx context.Context) error {
 	b.DetachOnContextDone(childCtx, cancel)
 
 	var (
-		cssToContainer map[uint64]*pod.Container
+		keyToContainer map[pod.ContainerCgroupKey]*pod.Container
 		cacheTime      time.Time
 	)
 
@@ -85,7 +89,7 @@ func (c *memoryReclaimTracing) Start(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		cssToContainer = pod.BuildCssContainers(containers, subsystem.SubsystemCPU)
+		keyToContainer = pod.BuildContainerCgroupKeys(containers, subsystem.SubsystemCPU)
 		cacheTime = time.Now()
 		return nil
 	}
@@ -104,20 +108,24 @@ func (c *memoryReclaimTracing) Start(ctx context.Context) error {
 				return fmt.Errorf("ReadFromPerfEvent fail: %w", err)
 			}
 
-			if cssToContainer == nil || time.Since(cacheTime) > cssCacheTTL {
+			if keyToContainer == nil || time.Since(cacheTime) > containerCacheTTL {
 				if err := refreshContainerCache(); err != nil {
 					log.Errorf("refresh container cache: %v", err)
 					continue
 				}
 			}
 
-			container := cssToContainer[data.CSS]
+			key := pod.ContainerCgroupKey{
+				CgroupID: data.Key.CgroupID,
+				CSS:      data.Key.CSS,
+			}
+			container := keyToContainer[key]
 			if container == nil {
 				if err := refreshContainerCache(); err != nil {
 					log.Errorf("refresh container cache: %v", err)
 					continue
 				}
-				container = cssToContainer[data.CSS]
+				container = keyToContainer[key]
 				if container == nil {
 					// We only care about the container and nothing else.
 					// Though it may be unfair, that's just how life is.
