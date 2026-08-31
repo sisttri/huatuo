@@ -57,13 +57,13 @@ func (p *ProcessPaths) PathForProcesses() (string, error) {
 	if p == nil {
 		return "", fmt.Errorf("nil process paths")
 	}
-	if p.Unified != "" {
-		return p.Unified, nil
-	}
 	for _, controller := range []string{"cpu", "cpuacct", "pids"} {
 		if value := p.Controllers[controller]; value != "" {
 			return value, nil
 		}
+	}
+	if p.Unified != "" {
+		return p.Unified, nil
 	}
 	return "", fmt.Errorf("process cgroup path not found")
 }

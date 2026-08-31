@@ -42,6 +42,35 @@ func TestParseProcessPaths(t *testing.T) {
 			hasControllers: true,
 		},
 		{
+			name: "hybrid prefers cpu hierarchy",
+			content: "0::/v2/container\n" +
+				"5:cpuacct:/v1/cpuacct/container\n" +
+				"4:cpu:/v1/cpu/container\n",
+			wantPath:       "/v1/cpu/container",
+			hasControllers: true,
+		},
+		{
+			name: "v1 falls back to cpuacct hierarchy",
+			content: "5:memory:/v1/memory/container\n" +
+				"4:cpuacct:/v1/cpuacct/container\n",
+			wantPath:       "/v1/cpuacct/container",
+			hasControllers: true,
+		},
+		{
+			name: "v1 falls back to pids hierarchy",
+			content: "5:memory:/v1/memory/container\n" +
+				"4:pids:/v1/pids/container\n",
+			wantPath:       "/v1/pids/container",
+			hasControllers: true,
+		},
+		{
+			name: "unified ignores unrelated controller",
+			content: "0::/v2/container\n" +
+				"5:memory:/v1/memory/container\n",
+			wantPath:       "/v2/container",
+			hasControllers: true,
+		},
+		{
 			name:     "invalid entry",
 			content:  "invalid\n",
 			hasError: true,
